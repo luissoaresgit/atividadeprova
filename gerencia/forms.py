@@ -1,5 +1,5 @@
 from django import forms
-from .models import Noticia
+from .models import Noticia, Categoria
 
 class NoticiaForm(forms.ModelForm):
     
@@ -15,6 +15,25 @@ class NoticiaForm(forms.ModelForm):
 
         }
 
+class CategoriaForm(forms.ModelForm):
+        
+    class Meta:
+        model = Categoria
+        fields = '__all__'
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-control'}), 
+        }
+
+    def clean_nome(self):
+        nome = self.cleaned_data.get('nome')
+        if not nome:
+            raise forms.ValidationError("O nome da categoria é obrigatório.")
+        
+        # Verifica se já existe uma categoria com o mesmo nome
+        if Categoria.objects.filter(nome__iexact=nome).exists():
+            raise forms.ValidationError("Uma categoria com este nome já existe.")
+        
+        return nome
 
 
 from django import forms
@@ -45,3 +64,11 @@ class NoticiaFilterForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
   
+class CategoriaFiltroForm(forms.Form):
+    nome = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Digite o nome da categoria'
+        })
+    )

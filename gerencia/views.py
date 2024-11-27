@@ -1,8 +1,10 @@
-from django.shortcuts import render,redirect
-from .forms import NoticiaForm, NoticiaFilterForm
+from django.shortcuts import render, redirect, get_object_or_404
+from .forms import NoticiaForm, NoticiaFilterForm, CategoriaForm, CategoriaFiltroForm
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.shortcuts import render
 from .models import Noticia, Categoria
+from django.core.paginator import Paginator
 
 # Create your views here.
 @login_required
@@ -89,3 +91,61 @@ def index(request):
         'search_query': search_query,
     }
     return render(request, 'gerencia/index.html', contexto)
+
+
+#CATEGORIA
+
+@login_required
+def categoria_cadastro(request):
+    if request.method == 'POST':
+        form = CategoriaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('gerencia:categoria_listagem')
+    else:
+        form = CategoriaForm()
+    return render(request, 'gerencia/categoria_cadastro.html', {'form': form})
+
+@login_required
+def categoria_listagem(request):
+    # Ordena as categorias em ordem alfabética
+    categorias = Categoria.objects.all().order_by('nome')  
+
+    # Aplicar filtros
+    filtro_form = CategoriaFiltroForm(request.GET)
+    if filtro_form.is_valid():
+        nome = filtro_form.cleaned_data.get('nome')
+        if nome:
+            categorias = categorias.filter(nome__icontains=nome)
+
+    # Paginação
+    paginator = Paginator(categorias, 10)  # Mostra 10 categorias por página
+    page_number = request.GET.get('page')  # Captura o número da página
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'gerencia/categoria_listagem.html', {
+        'page_obj': page_obj,  # Objeto com a página atual
+        'filtro_form': filtro_form
+    })
+
+@login_required
+def categoria_editar(request, id):
+    categoria = get_object_or_404(Categoria, id=id)
+    if request.method == 'POST':
+        form = CategoriaForm(request.POST, instance=categoria)
+        if form.is_valid():
+            form.save()
+            return redirect('gerencia:categoria_listagem')
+    else:
+        form = CategoriaForm(instance=categoria)
+    return render(request, 'gerencia/categoria_cadastro.html', {'form': form})
+
+@login_required
+def categoria_remover(request, id):
+    categoria = get_object_or_404(Categoria, id=id)
+    if request.method == 'POST':
+        categoria.delete()
+        return redirect('gerencia:categoria_listagem')
+    return render(request, 'gerencia/categoria_remover_confirmar.html', {'categoria': categoria})
+
+#FIMCATEGORIA
